@@ -1,0 +1,291 @@
+<?php $__env->startSection('title'); ?>
+    <?php echo e($project->name); ?> - Tasks
+<?php $__env->stopSection(); ?>
+<?php $__env->startSection('content'); ?>
+    <style>
+        .kanban-column {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            height: 100%;
+        }
+
+        .kanban-list {
+            min-height: 500px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .kanban-item {
+            cursor: move;
+        }
+
+        .kanban-item.invisible {
+            opacity: 0.4;
+        }
+    </style>
+    <div class="container">
+        <div class="bg-white align-items-center mb-4 shadow-sm p-3 rounded">
+            <h2 class="text-center"><?php echo e($project->name); ?> - Tasks</h2>
+        </div>
+
+        <?php if(session('success')): ?>
+            <div class="alert alert-success">
+                <?php echo e(session('success')); ?>
+
+            </div>
+        <?php endif; ?>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="kanban-column">
+                    <div class="d-flex justify-content-between bg-primary text-white shadow-sm align-items-center px-3 py-2 rounded-top">
+                        <h4 class="text-white fw-bolder m-0">To Do</h4>
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#createTaskModal"
+                            data-status="to_do" style="padding-top: 0.5rem; padding-bottom: 0.5rem;">+</button>
+                    </div>
+                    
+                    <div class="kanban-list" id="to_do">
+                        <?php $__currentLoopData = $tasks['to_do'] ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <div class="card mb-3 kanban-item" data-id="<?php echo e($task->id); ?>" draggable="true">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <?php echo e($task->title); ?> 
+                                        <span style="font-size: 12px;" class="badge <?php echo e($task->priority == 'low' ? 'bg-success' : ($task->priority == 'medium' ? 'bg-warning' : 'bg-danger')); ?>"><?php echo e(ucfirst($task->priority)); ?></span>
+                                    </h5>
+                                    
+                                    <p class="card-text"><?php echo e($task->description); ?></p>
+                                    <a href="<?php echo e(route('tasks.show', $task->id)); ?>" class="btn btn-primary btn-sm"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="kanban-column">
+                    <div class="d-flex justify-content-between shadow-sm align-items-center bg-warning px-3 py-2 rounded-top">
+                        <h4 class="text-white fw-bolder m-0">In Progress</h4>
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal"
+                            data-bs-target="#createTaskModal" data-status="in_progress"
+                            style="padding-top: 0.5rem; padding-bottom: 0.5rem;">+</button>
+                    </div>
+                    
+                    <div class="kanban-list" id="in_progress">
+                        <?php $__currentLoopData = $tasks['in_progress'] ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <div class="card mb-3 kanban-item" data-id="<?php echo e($task->id); ?>" draggable="true">
+                                <div class="card-body">
+                                    <h5 class="card-title"><?php echo e($task->title); ?></h5>
+                                    <p class="card-text"><?php echo e($task->description); ?></p>
+                                    <a href="<?php echo e(route('tasks.show', $task->id)); ?>" class="btn btn-warning btn-sm"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="kanban-column">
+                    <div class="d-flex justify-content-between shadow-sm align-items-center bg-success px-3 py-2 rounded-top">
+                        <h4 class="text-white fw-bolder m-0">Completed</h4>
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal"
+                            data-bs-target="#createTaskModal" data-status="completed" style="padding-top: 0.5rem; padding-bottom: 0.5rem;">+</button>
+                    </div>
+                    <div class="kanban-list" id="completed">
+                        <?php $__currentLoopData = $tasks['completed'] ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $task): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <div class="card mb-3 kanban-item" data-id="<?php echo e($task->id); ?>" draggable="true">
+                                <div class="card-body">
+                                    <h5 class="card-title"><?php echo e($task->title); ?></h5>
+                                    <p class="card-text"><?php echo e($task->description); ?></p>
+                                    <a href="<?php echo e(route('tasks.show', $task->id)); ?>" class="btn btn-success btn-sm"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Task Modal -->
+        <div class="modal fade" id="createTaskModal" tabindex="-1" aria-labelledby="createTaskModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="<?php echo e(route('projects.tasks.store', $project->id)); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createTaskModalLabel">Create Task</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <input type="text" name="title" id="title" class="form-control" required>
+                                <?php $__errorArgs = ['title'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <span class="text-danger"><?php echo e($message); ?></span>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea name="description" id="description" class="form-control"></textarea>
+                                <?php $__errorArgs = ['description'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <span class="text-danger"><?php echo e($message); ?></span>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            </div>
+                            <div class="mb-3">
+                                <label for="due_date" class="form-label">Due Date</label>
+                                <input type="date" name="due_date" id="due_date" class="form-control">
+                                <?php $__errorArgs = ['due_date'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <span class="text-danger"><?php echo e($message); ?></span>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            </div>
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select name="priority" id="priority" class="form-select" required>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                                <?php $__errorArgs = ['priority'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <span class="text-danger"><?php echo e($message); ?></span>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            </div>
+                            <div class="mb-3">
+                                <label for="user_id" class="form-label">Assign To</label>
+                                <select name="user_id" id="user_id" class="form-select">
+                                    <option value="<?php echo e(auth()->user()->id); ?>">Self</option>
+                                    <?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>  
+                                        <option value="<?php echo e($user->id); ?>"><?php echo e($user->name); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </select>
+                                <?php $__errorArgs = ['user_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                    <span class="text-danger"><?php echo e($message); ?></span>
+                                <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                            </div>
+                            <input type="hidden" name="status" id="task_status">
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Create Task</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const kanbanItems = document.querySelectorAll('.kanban-item');
+            const kanbanLists = document.querySelectorAll('.kanban-list');
+            const createTaskModal = document.getElementById('createTaskModal');
+            const taskStatusInput = document.getElementById('task_status');
+
+            createTaskModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget; 
+                var status = button.getAttribute('data-status'); 
+                taskStatusInput.value = status;
+            });
+
+            kanbanItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+
+            kanbanLists.forEach(list => {
+                list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('drop', handleDrop);
+            });
+
+            function handleDragStart(e) {
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                setTimeout(() => {
+                    e.target.classList.add('invisible');
+                }, 0);
+            }
+
+            function handleDragEnd(e) {
+                e.target.classList.remove('invisible');
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                const id = e.dataTransfer.getData('text');
+                const draggableElement = document.querySelector(`.kanban-item[data-id='${id}']`);
+                const dropzone = e.target.closest('.kanban-list');
+                dropzone.appendChild(draggableElement);
+
+                const status = dropzone.id;
+
+                updateTaskStatus(id, status);
+            }
+
+            function updateTaskStatus(id, status) {
+                fetch(`/tasks/${id}/update-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
+                    },
+                    body: JSON.stringify({
+                        status
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update task status');
+                    }
+                    return response.json();
+                }).then(data => {
+                    console.log('Task status updated:', data);
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        });
+    </script>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\Bodo\Downloads\Licenta - Final Project\task-manager-test\Task-Manager\resources\views/tasks/index.blade.php ENDPATH**/ ?>
