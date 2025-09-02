@@ -3,11 +3,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Task;
+use App\Services\TaskNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(TaskNotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     public function index(Project $project)
     {
         $tasks = $project->tasks()->get()->groupBy('status');
@@ -25,7 +33,10 @@ class TaskController extends Controller
             'priority' => 'required|in:low,medium,high',
         ]);
 
-        $project->tasks()->create($request->all());
+        $task = $project->tasks()->create($request->all());
+
+        // Send notifications to team members
+        $this->notificationService->notifyTaskCreated($task);
 
         return redirect()->route('projects.tasks.index', $project)->with('success', 'Task created successfully.');
     }
@@ -45,15 +56,27 @@ class TaskController extends Controller
             'status' => 'required|in:to_do,in_progress,completed',
         ]);
 
+        // Store original data for comparison
+        $originalData = $task->toArray();
+
         $task->update($request->all());
+
+        // Send notifications to team members
+        $this->notificationService->notifyTaskUpdated($task, $originalData);
 
         return redirect()->route('projects.tasks.index', $task->project_id)->with('success', 'Task updated successfully.');
     }
 
     public function updateStatus(Request $request, Task $task)
     {
+        // Store original data for comparison
+        $originalData = $task->toArray();
+        
         $task->status = $request->input('status');
         $task->save();
+
+        // Send notifications to team members
+        $this->notificationService->notifyTaskUpdated($task, $originalData);
 
         return response()->json(['message' => 'Task status updated successfully.']);
     }

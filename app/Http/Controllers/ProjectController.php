@@ -3,11 +3,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\User;
+use App\Services\TaskNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(TaskNotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     public function index()
     {
         $projects = Auth::user()->projects()->withCount(['tasks as to_do_tasks' => function ($query) {
@@ -84,7 +92,18 @@ class ProjectController extends Controller
         ]);
        
         $project = Project::find($request->project_id);
-        $project->teamProjects()->attach($request->user_id);
-        return redirect()->back()->with('success', 'User added successfully.');
+        $newMember = User::find($request->user_id);
+        
+        // Check if user is already a member
+        if (!$project->users()->where('user_id', $request->user_id)->exists()) {
+            $project->teamProjects()->attach($request->user_id);
+            
+            // Send notification to existing team members
+            $this->notificationService->notifyTeamMemberAdded($project, $newMember);
+            
+            return redirect()->back()->with('success', 'User added successfully.');
+        }
+        
+        return redirect()->back()->with('error', 'User is already a member of this project.');
     }
 }
